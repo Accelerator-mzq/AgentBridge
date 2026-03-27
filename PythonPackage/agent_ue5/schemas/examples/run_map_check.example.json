@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "summary": "Map check completed",
+  "data": {
+    "level_path": "/Game/Maps/TestMap",
+    "map_errors": [],
+    "map_warnings": [
+      "Actor truck_01 has invalid lightmap setting"
+    ]
+  },
+  "warnings": [],
+  "errors": []
+}

@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <EngineRoot Condition="'$(EngineRoot)' == '' and '$(AGENT_UE5_ENGINE_ROOT)' != ''">$(AGENT_UE5_ENGINE_ROOT)</EngineRoot>
+    <!-- 优先复用 UAT 在运行期注入的引擎根目录，避免把本机绝对路径写死。 -->
+    <EngineRoot Condition="'$(EngineRoot)' == '' and '$(uebp_LOCAL_ROOT)' != ''">$(uebp_LOCAL_ROOT)</EngineRoot>
+    <EngineRoot Condition="'$(EngineRoot)' == '' and '$(UEBP_LOCAL_ROOT)' != ''">$(UEBP_LOCAL_ROOT)</EngineRoot>
+    <EngineRoot Condition="'$(EngineRoot)' == '' and '$(UE_ENGINE_ROOT)' != ''">$(UE_ENGINE_ROOT)</EngineRoot>
+    <!-- 安装版 UAT 在当前环境下不会把上述变量注入到脚本模块工程；这里退回到团队当前统一的引擎安装路径。 -->
+    <EngineRoot Condition="'$(EngineRoot)' == ''">E:\Epic Games\UE_5.5</EngineRoot>
+  </PropertyGroup>
+
+  <Import Project="$(EngineRoot)\Engine\Source\Programs\Shared\UnrealEngine.csproj.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Configuration Condition=" '$(Configuration)' == '' ">Development</Configuration>
+    <OutputType>Library</OutputType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <Configurations>Debug;Release;Development</Configurations>
+    <RootNamespace>AgentBridge.Gauntlet</RootNamespace>
+    <AssemblyName>AgentBridgeGauntlet.Automation</AssemblyName>
+    <OutputPath>..\Binaries\DotNET\AutomationTool\AutomationScripts\AgentBridgeGauntlet</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Development|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(EngineRoot)\Engine\Source\Programs\Shared\EpicGames.Core\EpicGames.Core.csproj" PrivateAssets="All">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(EngineRoot)\Engine\Source\Programs\UnrealBuildTool\UnrealBuildTool.csproj" PrivateAssets="All">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(EngineRoot)\Engine\Source\Programs\AutomationTool\AutomationUtils\AutomationUtils.Automation.csproj" PrivateAssets="All">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(EngineRoot)\Engine\Source\Programs\AutomationTool\Gauntlet\Gauntlet.Automation.csproj" PrivateAssets="All">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+</Project>

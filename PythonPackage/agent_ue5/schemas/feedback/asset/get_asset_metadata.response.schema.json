@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_asset_metadata Response",
+  "description": "返回单个资产的基础元数据。用于 import_assets / create_blueprint_child 写后验证（确认资产存在、类型正确）和摆放前预估占地（mesh_asset_bounds）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_path", "class", "exists"],
+      "properties": {
+        "asset_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "资产路径，例如 /Game/Props/Crates/SM_Crate_01"
+        },
+        "asset_name": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "资产显示名称"
+        },
+        "class": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "资产类型，例如 StaticMesh / Blueprint / DataAsset"
+        },
+        "exists": {
+          "type": "boolean",
+          "description": "资产是否存在。import_assets 写后验证的核心判定字段"
+        },
+        "mesh_asset_bounds": {
+          "$ref": "../../common/bounds.schema.json#/$defs/mesh_asset_bounds",
+          "description": "资源原始包围盒（未经 Transform 变换）。仅在资产为 StaticMesh 等有几何体的类型时有值"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

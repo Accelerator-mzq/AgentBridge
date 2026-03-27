@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_dirty_assets Response",
+  "description": "返回当前未保存的脏资产列表。用于所有写操作后的副作用确认：确认哪些资产被修改、是否需要保存。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dirty_assets"],
+      "properties": {
+        "dirty_assets": {
+          "$ref": "../../common/primitives.schema.json#/$defs/string_array",
+          "description": "未保存的脏资产路径列表，例如 [\"/Game/Maps/Warehouse01\", \"/Game/Blueprints/BP_Enemy_Grunt\"]"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "run_map_check Response",
+  "description": "运行地图检查并返回结果。用于写操作后的地图级健康检查：发现悬空引用、错误设置、非法状态等。data 内的 map_errors/map_warnings 是地图检查结果，与外层响应的 errors/warnings（工具调用级）区分。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["map_errors", "map_warnings"],
+      "properties": {
+        "level_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "检查的目标关卡路径"
+        },
+        "map_errors": {
+          "$ref": "../../common/primitives.schema.json#/$defs/string_array",
+          "description": "地图检查发现的错误列表"
+        },
+        "map_warnings": {
+          "$ref": "../../common/primitives.schema.json#/$defs/string_array",
+          "description": "地图检查发现的警告列表，例如 [\"Actor has invalid lightmap setting\"]"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

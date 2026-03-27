@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounds Definitions",
+  "description": "UE5 包围盒结构定义。world_bounds_origin 为包围盒中心坐标（cm），world_bounds_extent 为包围盒半径（cm）。",
+  "$defs": {
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["world_bounds_origin", "world_bounds_extent"],
+      "properties": {
+        "world_bounds_origin": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        },
+        "world_bounds_extent": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        }
+      }
+    },
+    "mesh_asset_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["world_bounds_origin", "world_bounds_extent"],
+      "properties": {
+        "world_bounds_origin": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        },
+        "world_bounds_extent": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        }
+      },
+      "description": "资源原始包围盒（未经 Transform 变换），用于预估摆放占地"
+    }
+  }
+}

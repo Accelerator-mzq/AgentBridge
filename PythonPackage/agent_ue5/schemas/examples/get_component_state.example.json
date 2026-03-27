@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "summary": "Component state retrieved",
+  "data": {
+    "component_name": "StaticMeshComponent0",
+    "component_class": "/Script/Engine.StaticMeshComponent",
+    "relative_location": [0.0, 0.0, 0.0],
+    "relative_rotation": [0.0, 0.0, 0.0],
+    "relative_scale": [1.0, 1.0, 1.0]
+  },
+  "warnings": [],
+  "errors": []
+}

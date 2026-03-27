@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_actor_state Response",
+  "description": "读取单个 Actor 的核心状态，包括 transform、collision、tags。这是 MVP 闭环中最核心的反馈接口：spawn_actor 和 set_actor_transform 写后都依赖此接口做二次确认。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_name", "actor_path", "class", "target_level", "transform"],
+      "properties": {
+        "actor_name": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "Actor 显示名称"
+        },
+        "actor_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "Actor 唯一对象路径"
+        },
+        "class": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "Actor 类路径，例如 /Script/MyGame.BP_DecorTruck_C"
+        },
+        "target_level": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "Actor 所在关卡路径"
+        },
+        "transform": {
+          "$ref": "../../common/transform.schema.json#/$defs/transform"
+        },
+        "collision": {
+          "$ref": "../../common/collision.schema.json#/$defs/collision_state",
+          "description": "碰撞状态。可选：不是所有 Actor 都有碰撞配置。如存在，应返回完整碰撞信息（含 collision_box_extent / can_affect_navigation 等）"
+        },
+        "tags": {
+          "$ref": "../../common/primitives.schema.json#/$defs/string_array",
+          "description": "Actor Tags，UE5 中的标签数组，例如 [\"Vehicle\", \"Prop\"]"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "status": "success",
+  "summary": "Write operation completed successfully",
+  "data": {
+    "created_objects": [
+      {
+        "actor_name": "crate_cluster_a",
+        "actor_path": "/Game/Maps/TestMap.TestMap:PersistentLevel.crate_cluster_a"
+      }
+    ],
+    "modified_objects": [],
+    "deleted_objects": [],
+    "actual_transform": {
+      "location": [450.0, -300.0, 0.0],
+      "rotation": [0.0, 15.0, 0.0],
+      "relative_scale3d": [1.2, 1.2, 1.2]
+    },
+    "actual_bounds": {
+      "world_bounds_origin": [452.0, -298.0, 70.0],
+      "world_bounds_extent": [118.0, 79.0, 138.0]
+    },
+    "actual_collision": {
+      "collision_profile_name": "BlockAll",
+      "collision_enabled": "QueryAndPhysics",
+      "generate_overlap_events": false,
+      "collision_box_extent": [120.0, 80.0, 140.0],
+      "can_affect_navigation": true
+    },
+    "assigned": {
+      "component_name": "TruckMesh",
+      "slot_name": "Body",
+      "material_path": "/Game/Materials/M_Truck_Rust"
+    },
+    "dirty_assets": [
+      "/Game/Maps/TestMap"
+    ],
+    "validation": {
+      "inside_playable_area": true,
+      "overlaps_main_path": false,
+      "navigation_impact_ok": true
+    }
+  },
+  "warnings": [],
+  "errors": []
+}

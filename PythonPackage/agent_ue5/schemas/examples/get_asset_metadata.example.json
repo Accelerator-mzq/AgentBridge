@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "summary": "Asset metadata fetched successfully",
+  "data": {
+    "asset_path": "/Game/Props/Crates/SM_Crate_01",
+    "asset_name": "SM_Crate_01",
+    "class": "StaticMesh",
+    "exists": true,
+    "mesh_asset_bounds": {
+      "world_bounds_origin": [0.0, 0.0, 0.0],
+      "world_bounds_extent": [50.0, 50.0, 50.0]
+    }
+  },
+  "warnings": [],
+  "errors": []
+}

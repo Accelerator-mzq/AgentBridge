@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Warnings and Errors Definitions",
+  "description": "统一的 warnings/errors 数组结构定义。错误码遵循全局统一口径：INVALID_ARGS / ASSET_NOT_FOUND / ACTOR_NOT_FOUND / LEVEL_NOT_FOUND / CLASS_NOT_FOUND / PROPERTY_NOT_ALLOWED / EDITOR_NOT_READY / BUILD_FAILED / SAVE_FAILED / VALIDATION_FAILED / DRY_RUN_REQUIRED / WRITE_SCOPE_EXCEEDED / READBACK_FAILED。",
+  "$defs": {
+    "warning_item": {
+      "type": "string",
+      "description": "单条警告信息，纯文本"
+    },
+    "error_item": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "错误码，例如 ASSET_NOT_FOUND / INVALID_ARGS / READBACK_FAILED 等"
+            },
+            "message": {
+              "type": "string",
+              "description": "人可读的错误描述"
+            },
+            "details": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "附加上下文信息，例如 {\"asset_path\": \"/Game/Missing\"}"
+            }
+          }
+        }
+      ],
+      "description": "单条错误，可以是纯字符串或结构化错误对象"
+    },
+    "warnings_array": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning_item" }
+    },
+    "errors_array": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/error_item" }
+    }
+  }
+}

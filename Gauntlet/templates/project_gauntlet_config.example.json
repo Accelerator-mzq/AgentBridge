@@ -1,0 +1,10 @@
+{
+  "all_tests_filter": "Project.AgentBridge+Project.Functional Tests.Tests.FTEST_Example",
+  "smoke_tests_filter": "Project.AgentBridge.L1+Project.AgentBridge.L2",
+  "all_tests_max_duration": 900,
+  "smoke_tests_max_duration": 300,
+  "spec_execution_max_duration": 300,
+  "functional_test_prefixes": [
+    "Project.Functional Tests.Tests.FTEST_Example"
+  ]
+}

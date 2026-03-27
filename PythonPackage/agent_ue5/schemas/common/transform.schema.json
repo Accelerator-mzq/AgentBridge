@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Transform Definitions",
+  "description": "UE5 Actor Transform 结构定义。单位：location 为 cm，rotation 为 degrees（pitch/yaw/roll），relative_scale3d 为倍率。",
+  "$defs": {
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location", "rotation", "relative_scale3d"],
+      "properties": {
+        "location": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        },
+        "rotation": {
+          "$ref": "primitives.schema.json#/$defs/rotator"
+        },
+        "relative_scale3d": {
+          "$ref": "primitives.schema.json#/$defs/vector3"
+        }
+      }
+    }
+  }
+}

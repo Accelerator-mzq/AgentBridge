@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "summary": "Actor bounds fetched successfully",
+  "data": {
+    "actor_path": "/Game/Maps/TestMap.TestMap:PersistentLevel.truck_01",
+    "world_bounds_origin": [0.0, 200.0, 110.0],
+    "world_bounds_extent": [210.0, 95.0, 120.0]
+  },
+  "warnings": [],
+  "errors": []
+}

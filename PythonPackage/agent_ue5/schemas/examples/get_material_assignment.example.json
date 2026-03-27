@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "summary": "Material assignment retrieved",
+  "data": {
+    "actor_path": "/Game/Maps/TestMap.TestMap:PersistentLevel.truck_01",
+    "materials": [
+      {
+        "slot_index": 0,
+        "material_path": "/Game/Materials/M_Truck_Rust",
+        "material_name": "M_Truck_Rust"
+      },
+      {
+        "slot_index": 1,
+        "material_path": "/Game/Materials/M_Truck_Glass",
+        "material_name": "M_Truck_Glass"
+      }
+    ]
+  },
+  "warnings": [],
+  "errors": []
+}

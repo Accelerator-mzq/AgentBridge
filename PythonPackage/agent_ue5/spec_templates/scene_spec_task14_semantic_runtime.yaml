@@ -1,0 +1,58 @@
+# Task14 真机语义链路验证 Spec
+# 说明：
+# - 该 Spec 仅覆盖 semantic（L1）路径，用于隔离验证“类路径占位值”问题是否已解决。
+# - 使用 UE5 内建可稳定加载的 Actor 类，避免模板中的 /Script/MyGame.* 占位类导致真机失败。
+# - 保留 /Game/Maps/TestMap 作为逻辑目标关卡字段，以兼容当前 Spec 校验规则；
+#   实际执行仍由当前 Editor 会话中的已打开关卡承载。
+
+spec_version: ue5_agent_spec_v0_1
+
+scene:
+  scene_id: task14_semantic_runtime
+  scene_type: validation_only
+  target_level: /Game/Maps/TestMap
+
+defaults: {}
+
+layout: {}
+
+anchors: {}
+
+actors:
+  - id: truck_01
+    class: /Script/Engine.StaticMeshActor
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic
+    transform:
+      location: [1200.0, 800.0, 1500.0]
+      rotation: [0.0, 45.0, 0.0]
+      relative_scale3d: [1.0, 1.0, 1.0]
+
+  - id: crate_cluster_a
+    class: /Script/Engine.PointLight
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic
+    transform:
+      location: [1500.0, 1200.0, 1800.0]
+      rotation: [0.0, 0.0, 0.0]
+      relative_scale3d: [1.0, 1.0, 1.0]
+
+validation:
+  rules:
+    - actor_id: truck_01
+      checks:
+        - type: transform_match
+          tolerance:
+            location: 0.01
+            rotation: 0.01
+            relative_scale3d: 0.001
+
+    - actor_id: crate_cluster_a
+      checks:
+        - type: transform_match
+          tolerance:
+            location: 0.01
+            rotation: 0.01
+            relative_scale3d: 0.001

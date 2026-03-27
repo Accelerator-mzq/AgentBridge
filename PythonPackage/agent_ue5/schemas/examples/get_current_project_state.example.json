@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "summary": "Current project state fetched successfully",
+  "data": {
+    "project_name": "MyGame",
+    "uproject_path": "D:/Projects/MyGame/MyGame.uproject",
+    "engine_version": "5.5.4",
+    "current_level": "/Game/Maps/TestMap",
+    "editor_mode": "editing"
+  },
+  "warnings": [],
+  "errors": []
+}

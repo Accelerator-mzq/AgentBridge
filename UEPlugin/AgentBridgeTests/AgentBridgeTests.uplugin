@@ -1,0 +1,36 @@
+﻿{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.3.0",
+  "FriendlyName": "AgentBridgeTests",
+  "Description": "AgentBridge test plugin for L1/L2/L3 automation validation.",
+  "Category": "Testing",
+  "CreatedBy": "AgentUE5 Team",
+  "CreatedByURL": "",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "EnabledByDefault": false,
+  "Modules": [
+    {
+      "Name": "AgentBridgeTests",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": [
+        "Engine",
+        "UnrealEd"
+      ]
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "AgentBridge",
+      "Enabled": true
+    },
+    {
+      "Name": "FunctionalTesting",
+      "Enabled": true,
+      "Optional": true
+    }
+  ]
+}

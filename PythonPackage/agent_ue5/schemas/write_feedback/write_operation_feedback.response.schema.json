@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Generic Write Operation Feedback",
+  "description": "通用写操作反馈结构。所有写接口（spawn_actor / set_actor_transform / import_assets 等）执行后应返回符合此结构的反馈。包含：创建/修改/删除对象列表、actual 读回值、dirty assets、验证结果。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_objects",
+        "modified_objects",
+        "deleted_objects",
+        "dirty_assets",
+        "validation"
+      ],
+      "properties": {
+        "created_objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actor_name": { "type": "string" },
+              "actor_path": { "type": "string" },
+              "asset_path": { "type": "string" },
+              "object_path": { "type": "string" }
+            }
+          },
+          "description": "本次写操作创建的对象列表"
+        },
+        "modified_objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actor_path": { "type": "string" },
+              "asset_path": { "type": "string" },
+              "object_path": { "type": "string" }
+            }
+          },
+          "description": "本次写操作修改的对象列表"
+        },
+        "deleted_objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actor_path": { "type": "string" },
+              "asset_path": { "type": "string" },
+              "object_path": { "type": "string" }
+            }
+          },
+          "description": "本次写操作删除的对象列表"
+        },
+        "old_transform": {
+          "$ref": "../common/transform.schema.json#/$defs/transform",
+          "description": "写操作前的原始 transform（仅 set_actor_transform 等修改类操作返回）"
+        },
+        "actual_transform": {
+          "$ref": "../common/transform.schema.json#/$defs/transform",
+          "description": "写操作后读回的实际 transform（spawn_actor / set_actor_transform 必须返回）"
+        },
+        "actual_bounds": {
+          "$ref": "../common/bounds.schema.json#/$defs/bounds",
+          "description": "写操作后读回的实际包围盒（嵌套结构：{world_bounds_origin, world_bounds_extent}）"
+        },
+        "actual_collision": {
+          "$ref": "../common/collision.schema.json#/$defs/collision_state",
+          "description": "写操作后读回的实际碰撞状态（set_actor_collision 返回，MVP Phase 2）"
+        },
+        "assigned": {
+          "$ref": "../common/material.schema.json#/$defs/material_slot_assignment",
+          "description": "材质分配结果（assign_material 返回，MVP Phase 2）"
+        },
+        "dirty_assets": {
+          "$ref": "../common/primitives.schema.json#/$defs/string_array",
+          "description": "写操作导致的脏资产列表"
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "inside_playable_area": {
+              "type": "boolean",
+              "description": "对象是否在可玩区域内"
+            },
+            "overlaps_main_path": {
+              "type": "boolean",
+              "description": "对象是否与主路径重叠"
+            },
+            "navigation_impact_ok": {
+              "type": "boolean",
+              "description": "对导航的影响是否可接受"
+            }
+          },
+          "description": "验证结果。当前为 boolean 判定，后续版本应增加 expected/actual/tolerance/pass 结构化定义"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

@@ -1,0 +1,178 @@
+# AGENT + UE5 可操作层 — 场景 Spec 模板
+# 目标引擎版本：UE5.5.4
+# 本模板定义了一个结构化场景 Spec 的推荐格式。
+# Agent 读取此 Spec 后，通过受控工具执行操作。
+# 所有执行层字段必须为明确、可读回、可验证的值。
+# 禁止在执行层使用 size / center / near / proper 等模糊字段。
+#
+# 工具层次：
+#   execution_method: semantic（默认）→ L1 语义工具（SpawnActor / SetActorTransform）
+#   execution_method: ui_tool → L3 UI 工具（需 Automation Driver，仅当 L1 无法覆盖时使用）
+#   不指定 execution_method 时默认为 semantic
+
+spec_version: ue5_agent_spec_v0_1
+
+# ============================================================
+# 场景元数据
+# ============================================================
+scene:
+  scene_id: example_scene_01          # 场景唯一标识
+  scene_type: indoor_combat           # 场景类型（用于选择默认规则）
+  target_level: /Game/Maps/TestMap    # 目标关卡路径（UE 内容路径）
+
+# ============================================================
+# 默认规则（设计层 → 执行层的映射规则）
+# 这些规则必须显式声明，不允许执行时临时发明。
+# ============================================================
+defaults:
+  size_profile_to_scale:
+    small: [0.8, 0.8, 0.8]
+    medium: [1.0, 1.0, 1.0]
+    large: [1.25, 1.25, 1.25]
+    hero_large: [1.6, 1.6, 1.6]
+
+  density_to_spacing:
+    sparse: 300.0       # cm
+    medium: 180.0
+    dense: 90.0
+
+# ============================================================
+# 布局区域定义
+# 用于 inside_bounds 验证
+# ============================================================
+layout:
+  playable_area:
+    world_bounds_origin: [0.0, 0.0, 0.0]       # cm
+    world_bounds_extent: [3000.0, 2500.0, 600.0] # cm（半径）
+
+# ============================================================
+# 锚点定义
+# 用于 placement_rule 计算 location
+# ============================================================
+anchors:
+  room_center: [0.0, 0.0, 0.0]
+  main_entry: [-1200.0, 0.0, 0.0]
+  main_exit: [1200.0, 0.0, 0.0]
+  wall_left_mid: [-800.0, -1200.0, 0.0]
+
+# ============================================================
+# Actor 列表
+# 每个 Actor 必须包含执行层字段（location / rotation / relative_scale3d）
+# execution_method: semantic（默认）/ ui_tool（需 Automation Driver）
+# ============================================================
+actors:
+  # ---- L1 语义工具（默认） ----
+
+  - id: truck_01
+    class: /Script/MyGame.BP_DecorTruck_C   # UE 类路径
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic               # L1（默认，可省略）
+    transform:
+      location: [0.0, 200.0, 0.0]            # cm，世界坐标
+      rotation: [0.0, 90.0, 0.0]             # degrees，[pitch, yaw, roll]
+      relative_scale3d: [1.25, 1.25, 1.25]   # 倍率
+    collision:
+      collision_enabled: QueryAndPhysics
+      collision_profile_name: BlockAll
+      can_affect_navigation: true
+      collision_box_extent: [210.0, 95.0, 120.0]  # cm，仅 BoxComponent
+
+  - id: crate_cluster_a
+    class: /Script/MyGame.BP_CrateStack_C
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic               # L1（默认，可省略）
+    transform:
+      location: [450.0, -300.0, 0.0]
+      rotation: [0.0, 15.0, 0.0]
+      relative_scale3d: [1.2, 1.2, 1.2]
+    collision:
+      collision_enabled: QueryAndPhysics
+      collision_profile_name: BlockAll
+      can_affect_navigation: true
+      collision_box_extent: [120.0, 80.0, 140.0]
+    constraints:
+      must_be_inside: playable_area
+      must_not_overlap:
+        - nav_main_path
+
+  # ---- L3 UI 工具示例（仅当 L1 无法覆盖时使用） ----
+
+  - id: chair_drag_01
+    class: /Game/Meshes/SM_Chair            # 资产路径（拖拽用）
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: ui_tool                # L3（显式标注，必须）
+    ui_action:
+      type: drag_asset_to_viewport
+      asset_path: /Game/Meshes/SM_Chair
+      drop_location: [800.0, 600.0, 0.0]    # 世界坐标
+    # 拖拽走 Editor 原生 OnDropped 流程
+    # 触发自动碰撞设置 / 自动命名 / 自动贴地
+    # L1 spawn_actor 不触发这些行为
+    validation_override:
+      tolerance:
+        location: 100.0                      # cm（L3 容差远大于 L1 的 0.01）
+
+  - id: panel_button_click_01
+    object_type: ui_action                   # 非 Actor 生成，而是 UI 操作
+    target_level: /Game/Maps/TestMap
+    execution_method: ui_tool                # L3
+    ui_action:
+      type: click_detail_panel_button
+      actor_path: /Game/Maps/TestMap.truck_01
+      button_label: Add Component
+    # 操作后通过 L1 get_actor_state 验证状态变更
+
+# ============================================================
+# 验证规则
+# 执行后应按这些规则验证结果
+# L1 操作：容差 location 0.01cm / rotation 0.01° / scale 0.001
+# L3 操作：容差 location 100cm（UI 操作精度低于 API 调用）
+# L3 操作后必须通过 L1 工具做独立读回（L3→L1 交叉比对）
+# ============================================================
+validation:
+  rules:
+    # L1 语义工具的验证（标准容差）
+    - actor_id: truck_01
+      checks:
+        - type: inside_bounds
+          target: playable_area
+        - type: transform_match
+          tolerance:
+            location: 0.01        # cm
+            rotation: 0.01        # degrees
+            relative_scale3d: 0.001
+
+    - actor_id: crate_cluster_a
+      checks:
+        - type: inside_bounds
+          target: playable_area
+        - type: non_overlap
+          target: nav_main_path
+        - type: transform_match
+          tolerance:
+            location: 0.01
+            rotation: 0.01
+            relative_scale3d: 0.001
+
+    # L3 UI 工具的验证（宽容差 + L3→L1 交叉比对）
+    - actor_id: chair_drag_01
+      execution_method: ui_tool
+      checks:
+        - type: cross_verify       # L3→L1 交叉比对
+          l1_verify_func: list_level_actors
+          expect: actor_exists     # 验证 Actor 出现在 L1 列表中
+        - type: transform_match
+          tolerance:
+            location: 100.0        # cm（L3 UI 操作宽容差）
+
+    - actor_id: panel_button_click_01
+      execution_method: ui_tool
+      checks:
+        - type: cross_verify
+          l1_verify_func: get_actor_state
+          l1_verify_args:
+            actor_path: /Game/Maps/TestMap.truck_01
+          expect: state_changed    # 验证 L1 读回状态发生了变更

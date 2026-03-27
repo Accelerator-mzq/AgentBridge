@@ -1,0 +1,38 @@
+{
+  "version": "v0.1",
+  "engine_version": "UE5.5.4",
+  "description": "AGENT + UE5 可操作层 MVP 首批 Schema，覆盖 Phase 1 + Phase 2 写读闭环所需的全部反馈接口。",
+  "common_schemas": [
+    "common/primitives.schema.json",
+    "common/transform.schema.json",
+    "common/bounds.schema.json",
+    "common/collision.schema.json",
+    "common/error.schema.json",
+    "common/material.schema.json"
+  ],
+  "stable_schemas": [
+    "feedback/project/get_current_project_state.response.schema.json",
+    "feedback/level/list_level_actors.response.schema.json",
+    "feedback/actor/get_actor_state.response.schema.json",
+    "feedback/actor/get_actor_bounds.response.schema.json",
+    "feedback/actor/get_component_state.response.schema.json",
+    "feedback/actor/get_material_assignment.response.schema.json",
+    "feedback/asset/get_asset_metadata.response.schema.json",
+    "feedback/asset/get_dirty_assets.response.schema.json",
+    "feedback/validation/run_map_check.response.schema.json",
+    "write_feedback/write_operation_feedback.response.schema.json"
+  ],
+  "experimental_schemas": [],
+  "examples": [
+    "examples/get_current_project_state.example.json",
+    "examples/list_level_actors.example.json",
+    "examples/get_actor_state.example.json",
+    "examples/get_actor_bounds.example.json",
+    "examples/get_component_state.example.json",
+    "examples/get_material_assignment.example.json",
+    "examples/get_asset_metadata.example.json",
+    "examples/get_dirty_assets.example.json",
+    "examples/run_map_check.example.json",
+    "examples/write_operation_feedback.example.json"
+  ]
+}

@@ -1,0 +1,92 @@
+# Task14 通道 C 真机端到端验证 Spec
+# 设计原则：
+# - semantic：使用 UE 内建稳定类，避免模板中的 /Script/MyGame.* 占位类
+# - ui_tool：只选择当前已经完成真机闭环验证的 drag / type
+# - type 的 actor_path 通过 @actor_id 引用前序 semantic 创建结果，避免硬编码临时 ActorPath
+
+spec_version: ue5_agent_spec_v0_1
+
+scene:
+  scene_id: task14_cpp_plugin_runtime
+  scene_type: validation_only
+  target_level: /Game/Maps/TestMap
+
+defaults: {}
+
+layout: {}
+
+anchors: {}
+
+actors:
+  - id: truck_01
+    class: /Script/Engine.StaticMeshActor
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic
+    transform:
+      location: [1200.0, 800.0, 1500.0]
+      rotation: [0.0, 45.0, 0.0]
+      relative_scale3d: [1.0, 1.0, 1.0]
+
+  - id: crate_cluster_a
+    class: /Script/Engine.PointLight
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: semantic
+    transform:
+      location: [1500.0, 1200.0, 1800.0]
+      rotation: [0.0, 0.0, 0.0]
+      relative_scale3d: [1.0, 1.0, 1.0]
+
+  - id: chair_drag_01
+    object_type: actor
+    target_level: /Game/Maps/TestMap
+    execution_method: ui_tool
+    ui_action:
+      type: drag_asset_to_viewport
+      asset_path: /Engine/BasicShapes/Cube.Cube
+      drop_location: [600.0, 400.0, 0.0]
+
+  - id: panel_field_edit_01
+    object_type: ui_action
+    target_level: /Game/Maps/TestMap
+    execution_method: ui_tool
+    ui_action:
+      type: type_in_detail_panel_field
+      actor_path: "@truck_01"
+      property_path: RelativeLocation.X
+      value: "1337.5"
+
+validation:
+  rules:
+    - actor_id: truck_01
+      checks:
+        - type: transform_match
+          tolerance:
+            location: 0.01
+            rotation: 0.01
+            relative_scale3d: 0.001
+
+    - actor_id: crate_cluster_a
+      checks:
+        - type: transform_match
+          tolerance:
+            location: 0.01
+            rotation: 0.01
+            relative_scale3d: 0.001
+
+    - actor_id: chair_drag_01
+      execution_method: ui_tool
+      checks:
+        - type: cross_verify
+          l1_verify_func: list_level_actors
+          expect: actor_exists
+
+    - actor_id: panel_field_edit_01
+      execution_method: ui_tool
+      checks:
+        - type: cross_verify
+          l1_verify_func: get_actor_state
+          l1_verify_args:
+            actor_path: "@truck_01"
+          expect: state_changed

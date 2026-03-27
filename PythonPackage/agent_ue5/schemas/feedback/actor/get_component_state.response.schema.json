@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_component_state Response",
+  "description": "读取 Actor 指定组件的相对变换状态。用于验证组件层级是否存在，以及组件相对 Transform 是否符合预期。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_name",
+        "component_class",
+        "relative_location",
+        "relative_rotation",
+        "relative_scale"
+      ],
+      "properties": {
+        "component_name": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "组件名称，例如 StaticMeshComponent0"
+        },
+        "component_class": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "组件类路径，例如 /Script/Engine.StaticMeshComponent"
+        },
+        "relative_location": {
+          "$ref": "../../common/primitives.schema.json#/$defs/vector3",
+          "description": "组件相对位置 [x, y, z]，单位 cm"
+        },
+        "relative_rotation": {
+          "$ref": "../../common/primitives.schema.json#/$defs/rotator",
+          "description": "组件相对旋转 [pitch, yaw, roll]，单位 degrees"
+        },
+        "relative_scale": {
+          "$ref": "../../common/primitives.schema.json#/$defs/vector3",
+          "description": "组件相对缩放 [x, y, z]，单位倍率"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

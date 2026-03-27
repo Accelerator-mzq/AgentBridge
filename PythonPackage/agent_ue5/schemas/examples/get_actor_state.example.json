@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "summary": "Actor state fetched successfully",
+  "data": {
+    "actor_name": "truck_01",
+    "actor_path": "/Game/Maps/TestMap.TestMap:PersistentLevel.truck_01",
+    "class": "/Script/MyGame.BP_DecorTruck_C",
+    "target_level": "/Game/Maps/TestMap",
+    "transform": {
+      "location": [0.0, 200.0, 0.0],
+      "rotation": [0.0, 90.0, 0.0],
+      "relative_scale3d": [1.25, 1.25, 1.25]
+    },
+    "collision": {
+      "collision_profile_name": "BlockAll",
+      "collision_enabled": "QueryAndPhysics",
+      "generate_overlap_events": false,
+      "collision_box_extent": [210.0, 95.0, 120.0],
+      "can_affect_navigation": true
+    },
+    "tags": ["Vehicle", "Prop"]
+  },
+  "warnings": [],
+  "errors": []
+}

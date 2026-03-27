@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collision State Definitions",
+  "description": "UE5.5.4 碰撞状态结构定义。字段均为 optional，因为不同 Actor 碰撞配置差异较大。",
+  "$defs": {
+    "collision_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "collision_profile_name": {
+          "type": "string",
+          "description": "UE5 碰撞预设名，例如 BlockAll / OverlapAll / NoCollision 等"
+        },
+        "collision_enabled": {
+          "type": "string",
+          "description": "碰撞启用模式，例如 QueryAndPhysics / QueryOnly / PhysicsOnly / NoCollision"
+        },
+        "generate_overlap_events": {
+          "type": "boolean"
+        },
+        "collision_box_extent": {
+          "$ref": "primitives.schema.json#/$defs/vector3",
+          "description": "Box 碰撞体半径（cm）。仅适用于 BoxComponent 场景"
+        },
+        "collision_capsule_radius": {
+          "type": "number",
+          "description": "Capsule 碰撞体半径（cm）。仅适用于 CapsuleComponent 场景"
+        },
+        "collision_capsule_half_height": {
+          "type": "number",
+          "description": "Capsule 碰撞体半高（cm）。仅适用于 CapsuleComponent 场景"
+        },
+        "can_affect_navigation": {
+          "type": "boolean",
+          "description": "是否影响导航网格构建"
+        }
+      }
+    }
+  }
+}

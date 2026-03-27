@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_current_project_state Response",
+  "description": "返回当前项目与编辑器上下文。目标引擎版本：UE5.5.4。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_name",
+        "uproject_path",
+        "engine_version",
+        "current_level",
+        "editor_mode"
+      ],
+      "properties": {
+        "project_name": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string"
+        },
+        "uproject_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string"
+        },
+        "engine_version": {
+          "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+          "description": "引擎版本号，例如 5.5.4"
+        },
+        "current_level": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "当前打开的关卡路径"
+        },
+        "editor_mode": {
+          "type": "string",
+          "enum": ["editing", "pie", "simulating", "unknown"],
+          "description": "editing=正常编辑, pie=Play In Editor, simulating=模拟运行, unknown=无法判定"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

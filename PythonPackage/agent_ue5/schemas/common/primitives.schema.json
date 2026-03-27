@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Common Primitive Types",
+  "description": "AGENT + UE5 可操作层基础类型定义。所有 Schema 的底层依赖。目标引擎版本：UE5.5.4。",
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": ["success", "warning", "failed", "mismatch", "validation_error"],
+      "description": "success=执行成功且验证通过, warning=成功但有非阻塞警告, failed=执行失败, mismatch=执行成功但读回值与预期不符, validation_error=参数/Spec校验未通过未执行"
+    },
+    "vector3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "三元数组 [x, y, z]，单位取决于上下文（location 为 cm，scale 为倍率）"
+    },
+    "rotator": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "旋转三元数组 [pitch, yaw, roll]，单位为度（degrees）"
+    },
+    "string_array": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "path_string": {
+      "type": "string",
+      "minLength": 1,
+      "description": "UE 对象路径或文件路径，不允许为空字符串"
+    }
+  }
+}

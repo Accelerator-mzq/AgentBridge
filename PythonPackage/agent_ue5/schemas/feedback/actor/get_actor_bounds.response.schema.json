@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_actor_bounds Response",
+  "description": "返回单个 Actor 的世界包围盒信息。用于判断视觉占地、越界检查、overlap 预检。bounds 字段在 data 下直接平铺（本接口的 data 本身就是 bounds 信息）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_path", "world_bounds_origin", "world_bounds_extent"],
+      "properties": {
+        "actor_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "Actor 唯一对象路径"
+        },
+        "world_bounds_origin": {
+          "$ref": "../../common/primitives.schema.json#/$defs/vector3",
+          "description": "世界包围盒中心坐标（cm）"
+        },
+        "world_bounds_extent": {
+          "$ref": "../../common/primitives.schema.json#/$defs/vector3",
+          "description": "世界包围盒半径（cm）"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

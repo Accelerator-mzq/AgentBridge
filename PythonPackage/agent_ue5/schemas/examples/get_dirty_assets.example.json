@@ -1,0 +1,12 @@
+{
+  "status": "success",
+  "summary": "Dirty assets fetched successfully",
+  "data": {
+    "dirty_assets": [
+      "/Game/Maps/TestMap",
+      "/Game/Blueprints/Enemies/BP_Enemy_Grunt"
+    ]
+  },
+  "warnings": [],
+  "errors": []
+}

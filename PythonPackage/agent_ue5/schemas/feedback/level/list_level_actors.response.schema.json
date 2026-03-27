@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "list_level_actors Response",
+  "description": "列出目标关卡中的 Actor 列表。用于写前查询（确认对象是否已存在）和写后验证（确认对象已创建）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actors"],
+      "properties": {
+        "level_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "查询的关卡路径"
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["actor_name", "actor_path", "class"],
+            "properties": {
+              "actor_name": {
+                "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+                "description": "Actor 显示名称"
+              },
+              "actor_path": {
+                "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+                "description": "Actor 唯一对象路径"
+              },
+              "class": {
+                "$ref": "../../common/primitives.schema.json#/$defs/non_empty_string",
+                "description": "Actor 类路径，例如 /Script/MyGame.BP_DecorTruck_C"
+              }
+            }
+          }
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}

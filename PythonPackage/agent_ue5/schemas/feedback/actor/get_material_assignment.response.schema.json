@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_material_assignment Response",
+  "description": "读取 Actor 当前 MeshComponent 的材质槽位分配结果。用于 assign_material 写后验证和 Undo 恢复确认。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "data", "warnings", "errors"],
+  "properties": {
+    "status": {
+      "$ref": "../../common/primitives.schema.json#/$defs/status"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_path", "materials"],
+      "properties": {
+        "actor_path": {
+          "$ref": "../../common/primitives.schema.json#/$defs/path_string",
+          "description": "目标 Actor 的完整对象路径"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "../../common/material.schema.json#/$defs/material_readback"
+          },
+          "description": "当前材质槽位读回结果"
+        }
+      }
+    },
+    "warnings": {
+      "$ref": "../../common/error.schema.json#/$defs/warnings_array"
+    },
+    "errors": {
+      "$ref": "../../common/error.schema.json#/$defs/errors_array"
+    }
+  }
+}
