@@ -35,6 +35,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/App.h"
 #include "Misc/DefaultValueHelper.h"
+#include "Misc/EngineVersion.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Misc/FileHelper.h"
@@ -106,7 +107,8 @@ public:
 
 namespace
 {
-	// 统一给写接口响应打上 transaction 标记，保证 RC 返回字段一致。
+	// 统一给写接口响应打上 transaction 标记。
+	// 注意：bTransaction 供 C++ 逻辑/测试直接读取，RC 镜像仍只同步 Schema 声明的字段。
 	static FBridgeResponse FinalizeWriteResponse(FBridgeResponse Response)
 	{
 		Response.bTransaction = true;
@@ -349,7 +351,12 @@ FBridgeResponse UAgentBridgeSubsystem::GetCurrentProjectState()
 
 	FString ProjectPath = FPaths::GetProjectFilePath();
 	FString ProjectName = FPaths::GetBaseFilename(ProjectPath);
-	FString EngineVersion = FApp::GetBuildVersion();
+	// 与 Python / RC 通道保持一致，优先返回真实引擎版本号而不是构建号。
+	FString EngineVersion = FEngineVersion::Current().ToString(EVersionComponent::Patch);
+	if (EngineVersion.IsEmpty())
+	{
+		EngineVersion = FApp::GetBuildVersion();
+	}
 
 	UWorld* World = GetEditorWorld();
 	FString CurrentLevel = TEXT("");

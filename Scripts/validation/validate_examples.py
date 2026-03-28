@@ -29,9 +29,13 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 
-from jsonschema import Draft202012Validator, RefResolver
+from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError, SchemaError
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 _THIS_DIR = Path(__file__).resolve().parent
 _BRIDGE_DIR = _THIS_DIR.parent / "bridge"
@@ -133,14 +137,51 @@ def check_no_dollar_id(schema_obj: dict, schema_path: Path) -> Optional[str]:
     return None
 
 
-def make_resolver(schema_path: Path, schema_obj: dict) -> RefResolver:
+def uri_to_local_path(uri: str) -> Path:
     """
-    为相对 $ref 提供本地文件解析能力。
-    base_uri 基于 schema 文件的文件系统路径。
-    前提：schema 不包含 $id（否则 $id 会覆盖 base_uri）。
+    将 file:// URI 还原为本地路径。
+
+    当前 Schema 体系只允许本地文件相对引用，不应解析远程 URL。
+    """
+    parsed = urlparse(uri)
+    if parsed.scheme != "file":
+        raise ValueError(
+            f"仅支持 file:// 本地 Schema 引用，收到 URI: {uri}",
+        )
+    return Path(url2pathname(unquote(parsed.path)))
+
+
+def retrieve_schema_resource(uri: str) -> Resource:
+    """
+    为 referencing.Registry 提供按需加载能力。
+
+    当 schema 中出现相对 $ref 时，referencing 会把它解析成 file:// URI，
+    再回调这里从本地文件系统读取 JSON 内容。
+    """
+    schema_path = uri_to_local_path(uri)
+    schema_obj = load_json(schema_path)
+    return Resource.from_contents(
+        schema_obj,
+        default_specification=DRAFT202012,
+    )
+
+
+def make_registry(schema_path: Path, schema_obj: dict) -> Registry:
+    """
+    构建本地 Schema registry，替代已弃用的 RefResolver。
+
+    这里把根 schema 挂到它自己的 file:// URI 下，并通过 retrieve 回调
+    支持后续相对 $ref 按本地文件路径继续解析。
     """
     base_uri = schema_path.resolve().as_uri()
-    return RefResolver(base_uri=base_uri, referrer=schema_obj)
+    root_resource = Resource.from_contents(
+        schema_obj,
+        default_specification=DRAFT202012,
+    )
+    return Registry(retrieve=retrieve_schema_resource).with_resource(
+        base_uri,
+        root_resource,
+    )
 
 
 def validate_example_against_schema(
@@ -192,8 +233,13 @@ def validate_example_against_schema(
 
     # 校验 example 是否符合 schema
     try:
-        resolver = make_resolver(schema_path, schema_obj)
-        validator = Draft202012Validator(schema_obj, resolver=resolver)
+        registry = make_registry(schema_path, schema_obj)
+        base_uri = schema_path.resolve().as_uri()
+        validator = Draft202012Validator(
+            schema_obj,
+            registry=registry,
+            _resolver=registry.resolver(base_uri=base_uri),
+        )
         errors = sorted(
             validator.iter_errors(example_obj),
             key=lambda x: list(x.absolute_path),

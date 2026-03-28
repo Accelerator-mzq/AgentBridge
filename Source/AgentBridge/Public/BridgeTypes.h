@@ -19,6 +19,9 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Editor.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "JsonObjectWrapper.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -301,8 +304,10 @@ struct AGENTBRIDGE_API FBridgeResponse
 	UPROPERTY(BlueprintReadOnly, Category = "AgentBridge")
 	TArray<FBridgeError> errors;
 
-	/** 标记此操作是否通过 UE5 Transaction System 纳入 Undo */
-	UPROPERTY(BlueprintReadOnly, Category = "AgentBridge")
+	/** 标记此操作是否通过 UE5 Transaction System 纳入 Undo。
+	 *  该字段供 C++ 逻辑与测试直接读取，不通过 RC 结构镜像自动暴露，
+	 *  以避免查询接口响应额外携带未在 Schema 中声明的顶层字段。
+	 */
 	bool bTransaction = false;
 
 	/** 同步 RC 可序列化镜像字段。 */
@@ -342,6 +347,7 @@ struct AGENTBRIDGE_API FBridgeResponse
 
 		Root->SetStringField(TEXT("status"), BridgeStatusToString(Status));
 		Root->SetStringField(TEXT("summary"), Summary);
+		Root->SetBoolField(TEXT("bTransaction"), bTransaction);
 
 		if (Data.IsValid())
 		{

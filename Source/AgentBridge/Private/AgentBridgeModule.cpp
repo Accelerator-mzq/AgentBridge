@@ -10,6 +10,7 @@
 //   2. 输出启动日志（便于确认 Plugin 是否正确加载）
 //   3. 未来扩展点：注册 Remote Control Preset / 自定义 Console Command
 
+#include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 #include "Modules/ModuleInterface.h"
 
