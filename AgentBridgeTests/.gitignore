@@ -1,0 +1,19 @@
+# AgentBridgeTests Plugin .gitignore
+# ====================================
+# 排除 UE5 编译产物和运行时缓存
+
+# UE5 编译产物
+Intermediate/
+Binaries/
+
+# UE5 运行时
+Saved/
+DerivedDataCache/
+
+# 测试生成的临时 Content（如 functional test map）
+# 如果有手动创建的测试地图需要入库，注释掉下面这行
+# Content/
+
+# OS 杂项
+.DS_Store
+Thumbs.db

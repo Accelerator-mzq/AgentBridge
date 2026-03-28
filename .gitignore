@@ -1,0 +1,30 @@
+# AgentBridge Plugin .gitignore
+# ==============================
+# 排除 UE5 编译产物和运行时缓存
+# 此文件替换 Codex 生成的版本
+
+# UE5 编译产物（不应入库，会制造大量无意义冲突）
+Intermediate/
+Binaries/
+
+# UE5 运行时缓存
+Saved/
+DerivedDataCache/
+
+# Python 缓存
+Scripts/bridge/__pycache__/
+Scripts/orchestrator/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Gauntlet 编译产物
+Gauntlet/obj/
+Gauntlet/bin/
+
+# 运行产物应在项目根 reports/，不在插件内
+reports/
+
+# OS 杂项
+.DS_Store
+Thumbs.db

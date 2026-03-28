@@ -575,3 +575,4 @@ errors: []
 ### Phase 3：高级能力（后续扩展，"看得全"）
 
 `get_scene_layout_summary` / `compare_screenshot_to_baseline` / `get_constraint_evaluation`
+

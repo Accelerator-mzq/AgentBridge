@@ -1,0 +1,27 @@
+﻿# AgentBridge 本地 Git 排除模板
+# 基准目录：Plugins/AgentBridge/ 仓库根目录
+# 用途：协调“项目仓需要本地验证产物”和“插件仓只上传正式交付件”这两种口径。
+# 说明：本文件适合作为 .git/info/exclude 的本地模板，不会进入插件仓版本控制。
+
+reports/
+Saved/
+*.log
+Binaries/
+Intermediate/
+DerivedDataCache/
+Gauntlet/bin/
+Gauntlet/obj/
+.vs/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+local_config.py
+project_local.env
