@@ -5,12 +5,17 @@
 #include "AgentBridgeSubsystem.h"
 #include "BridgeTypes.h"
 #include "Editor.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/App.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "Misc/DateTime.h"
+#include "Modules/ModuleManager.h"
+#include "UObject/GarbageCollection.h"
+#include "UObject/UObjectGlobals.h"
 
 namespace
 {
@@ -78,6 +83,126 @@ static FString GetCreatedActorPath(const FBridgeResponse& SpawnResp)
     const TSharedPtr<FJsonObject> Obj = (*Created)[0].IsValid() ? (*Created)[0]->AsObject() : nullptr;
     return Obj.IsValid() && Obj->HasField(TEXT("actor_path")) ? Obj->GetStringField(TEXT("actor_path")) : FString();
 }
+
+static FString GetCreatedAssetPath(const FBridgeResponse& Response)
+{
+    if (!Response.Data.IsValid()) return FString();
+
+    const TArray<TSharedPtr<FJsonValue>>* Created = nullptr;
+    if (!Response.Data->TryGetArrayField(TEXT("created_objects"), Created) || !Created || Created->Num() == 0)
+    {
+        return FString();
+    }
+
+    const TSharedPtr<FJsonObject> Obj = (*Created)[0].IsValid() ? (*Created)[0]->AsObject() : nullptr;
+    return Obj.IsValid() && Obj->HasField(TEXT("asset_path")) ? Obj->GetStringField(TEXT("asset_path")) : FString();
+}
+
+static bool DoesAssetExistInRegistry(const FString& AssetObjectPath)
+{
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+    AssetRegistryModule.Get().WaitForCompletion();
+    return AssetRegistryModule.Get().GetAssetByObjectPath(FSoftObjectPath(AssetObjectPath)).IsValid();
+}
+
+static UObject* FindLoadedAssetWithoutLoading(const FString& AssetObjectPath)
+{
+    return AssetObjectPath.IsEmpty() ? nullptr : FindObject<UObject>(nullptr, *AssetObjectPath);
+}
+
+static bool WaitUntilLoadedAssetDisappears(const FString& AssetObjectPath)
+{
+    if (AssetObjectPath.IsEmpty())
+    {
+        return false;
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+
+    // Undo 删除未保存资产后，AssetRegistry 的可见状态可能会比对象析构慢几个 Tick。
+    // 这里主动做一次短暂收敛，避免把“已撤销但尚未完全清扫”的瞬时状态误判成失败。
+    for (int32 Attempt = 0; Attempt < 20; ++Attempt)
+    {
+        AssetRegistryModule.Get().WaitForCompletion();
+        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+        FAssetRegistryModule::TickAssetRegistry(0.0f);
+
+        if (!FindLoadedAssetWithoutLoading(AssetObjectPath))
+        {
+            return true;
+        }
+
+        FPlatformProcess::Sleep(0.1f);
+    }
+
+    return FindLoadedAssetWithoutLoading(AssetObjectPath) == nullptr;
+}
+
+static bool WaitUntilAssetLeavesRegistry(const FString& AssetObjectPath)
+{
+    if (AssetObjectPath.IsEmpty())
+    {
+        return false;
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+
+    for (int32 Attempt = 0; Attempt < 50; ++Attempt)
+    {
+        AssetRegistryModule.Get().WaitForCompletion();
+        FAssetRegistryModule::TickAssetRegistry(0.0f);
+
+        if (!DoesAssetExistInRegistry(AssetObjectPath))
+        {
+            return true;
+        }
+
+        FPlatformProcess::Sleep(0.1f);
+    }
+
+    return !DoesAssetExistInRegistry(AssetObjectPath);
+}
+
+class FEditorEngineUndoBroadcastAccessor : public UEditorEngine
+{
+public:
+    static bool GetSuspendBroadcastPostUndoRedo(UEditorEngine* Editor)
+    {
+        return static_cast<FEditorEngineUndoBroadcastAccessor*>(Editor)->bSuspendBroadcastPostUndoRedo;
+    }
+
+    static void SetSuspendBroadcastPostUndoRedo(UEditorEngine* Editor, bool bValue)
+    {
+        static_cast<FEditorEngineUndoBroadcastAccessor*>(Editor)->bSuspendBroadcastPostUndoRedo = bValue;
+    }
+};
+
+class FScopedSuspendEditorUndoBroadcast
+{
+public:
+    explicit FScopedSuspendEditorUndoBroadcast(UEditorEngine* InEditor)
+        : Editor(InEditor)
+        , bPreviousValue(false)
+    {
+        if (Editor)
+        {
+            bPreviousValue = FEditorEngineUndoBroadcastAccessor::GetSuspendBroadcastPostUndoRedo(Editor);
+            FEditorEngineUndoBroadcastAccessor::SetSuspendBroadcastPostUndoRedo(Editor, true);
+        }
+    }
+
+    ~FScopedSuspendEditorUndoBroadcast()
+    {
+        if (Editor)
+        {
+            FEditorEngineUndoBroadcastAccessor::SetSuspendBroadcastPostUndoRedo(Editor, bPreviousValue);
+        }
+    }
+
+private:
+    UEditorEngine* Editor;
+    bool bPreviousValue;
+};
 
 static bool IsValidationInvalidArgs_Write(const FBridgeResponse& Response)
 {
@@ -309,7 +434,7 @@ bool FBridgeL1_CreateBlueprintChild::RunTest(const FString& Parameters)
     if (!Subsystem) return false;
 
     const FString ParentClass = TEXT("/Script/Engine.Actor");
-    const FString UniqueSuffix = FString::FromInt(FDateTime::UtcNow().ToUnixTimestamp());
+    const FString UniqueSuffix = FString::Printf(TEXT("%lld"), static_cast<long long>(FDateTime::UtcNow().GetTicks()));
     const FString PackagePath = FString::Printf(TEXT("/Game/Tests/BP_T1_11_TestChild_%s"), *UniqueSuffix);
 
     // 1) 参数校验
@@ -335,22 +460,54 @@ bool FBridgeL1_CreateBlueprintChild::RunTest(const FString& Parameters)
         TestTrue(TEXT("dry_run bTransaction=true"), Dry.bTransaction);
     }
 
-    // 4) 实际创建 + Undo（无头模式下跳过，避免引擎 BlueprintCompilationManager ensure）
-    if (!FApp::IsUnattended())
+    // 4) 实际创建 + Undo
+    // 这里不再用 FApp::IsUnattended() 判断，因为可见 Editor 自动化会话里它也可能为 true。
+    // 对本测试更关键的是“当前会话是否真的具备渲染/交互能力”；无头 NullRHI 会话则继续跳过。
+    if (FApp::CanEverRender())
     {
         const FBridgeResponse Create = Subsystem->CreateBlueprintChild(ParentClass, PackagePath, false);
         TestEqual(TEXT("create status"), BridgeStatusToString(Create.Status), TEXT("success"));
         TestTrue(TEXT("create bTransaction=true"), Create.bTransaction);
         TestTrue(TEXT("created_objects 存在"), Create.Data.IsValid() && Create.Data->HasField(TEXT("created_objects")));
 
+        const FString CreatedAssetPath = GetCreatedAssetPath(Create);
+        TestFalse(TEXT("created asset_path 非空"), CreatedAssetPath.IsEmpty());
+
+        if (!CreatedAssetPath.IsEmpty())
+        {
+            TestNotNull(TEXT("创建后对象已实际存在于内存"), FindLoadedAssetWithoutLoading(CreatedAssetPath));
+            TestTrue(TEXT("创建后 AssetRegistry 已登记"), DoesAssetExistInRegistry(CreatedAssetPath));
+        }
+
         if (GEditor)
         {
-            GEditor->UndoTransaction();
+            // UE 5.5.4 的 Blueprint Undo 广播链会在“撤销刚创建的 Blueprint 资产”时触发
+            // BlueprintCompilationManager 的 handled ensure。这里仅在测试内暂时关闭该广播，
+            // 保留原生 Transaction.Apply() 本身，用“对象消失 + 同路径可重建”来验证 Undo 结果。
+            FScopedSuspendEditorUndoBroadcast SuspendUndoBroadcast(GEditor);
+            // 这里显式禁用 Redo 保留，避免新建出来的 Blueprint 仍被 Redo 栈引用，导致对象迟迟不释放。
+            GEditor->UndoTransaction(false);
+        }
+
+        if (!CreatedAssetPath.IsEmpty())
+        {
+            TestTrue(TEXT("Undo 后内存中的 Blueprint 对象已移除"),
+                WaitUntilLoadedAssetDisappears(CreatedAssetPath));
+
+            // 可见 Editor 会在同路径再创建时弹出覆盖确认框，因此这里不再用“重建同名资产”做判据。
+            // 我们只把“事务真的执行过 Undo，且刚创建的 Blueprint 对象已从内存移除”作为硬断言；
+            // AssetRegistry 若仍保留短暂缓存，仅记 warning，避免测试被 UI 弹窗反向污染。
+            if (!WaitUntilAssetLeavesRegistry(CreatedAssetPath))
+            {
+                AddWarning(FString::Printf(
+                    TEXT("Undo 后 Blueprint 对象已移除，但 AssetRegistry 仍暂时保留条目：%s"),
+                    *CreatedAssetPath));
+            }
         }
     }
     else
     {
-        AddWarning(TEXT("无头模式下跳过 CreateBlueprintChild 的实际创建步骤，仅验证参数/错误路径/dry_run。"));
+        AddWarning(TEXT("当前会话无法渲染，跳过 CreateBlueprintChild 的实际创建步骤，仅验证参数/错误路径/dry_run。"));
     }
 
     return true;

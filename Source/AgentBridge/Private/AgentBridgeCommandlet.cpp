@@ -11,6 +11,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
@@ -45,6 +46,46 @@ namespace
 		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
 		FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
 		return Json;
+	}
+
+	/** 获取可用于无头子进程的 UnrealEditor-Cmd 路径。 */
+	static FString ResolveCommandletExecutablePath()
+	{
+		FString ExecutablePath = FPlatformProcess::ExecutablePath();
+		const FString ExecutableName = FPaths::GetCleanFilename(ExecutablePath);
+
+		if (ExecutableName.Equals(TEXT("UnrealEditor.exe"), ESearchCase::IgnoreCase))
+		{
+			const FString Candidate = FPaths::Combine(FPaths::GetPath(ExecutablePath), TEXT("UnrealEditor-Cmd.exe"));
+			if (FPaths::FileExists(Candidate))
+			{
+				return Candidate;
+			}
+		}
+
+		return ExecutablePath;
+	}
+
+	/** 尝试定位嵌套测试插件，便于 -RunTests 模式在无头子进程中显式加载。 */
+	static FString ResolveAgentBridgeTestsPluginPath()
+	{
+		const FString Candidate = FPaths::ConvertRelativePathToFull(
+			FPaths::ProjectDir() / TEXT("Plugins/AgentBridge/AgentBridgeTests/AgentBridgeTests.uplugin"));
+		return FPaths::FileExists(Candidate) ? Candidate : FString();
+	}
+
+	/** 根据退出码映射桥接状态。 */
+	static EBridgeStatus ExitCodeToBridgeStatus(const int32 ExitCode)
+	{
+		if (ExitCode == 0)
+		{
+			return EBridgeStatus::Success;
+		}
+		if (ExitCode == 1)
+		{
+			return EBridgeStatus::Mismatch;
+		}
+		return EBridgeStatus::Failed;
 	}
 }
 
@@ -383,22 +424,128 @@ int32 UAgentBridgeCommandlet::RunSpec()
 
 int32 UAgentBridgeCommandlet::RunTests()
 {
-	if (!GEditor)
+	const FString ExecutablePath = ResolveCommandletExecutablePath();
+	if (!FPaths::FileExists(ExecutablePath))
 	{
-		LastResultJson = MakeSimpleResultJson(EBridgeStatus::Failed, TEXT("GEditor is null"));
-		UE_LOG(LogTemp, Error, TEXT("[AgentBridge Commandlet] GEditor is null"));
+		LastResultJson = MakeSimpleResultJson(EBridgeStatus::Failed, TEXT("Unable to resolve UnrealEditor-Cmd executable"));
+		UE_LOG(LogTemp, Error, TEXT("[AgentBridge Commandlet] UnrealEditor-Cmd executable not found: %s"), *ExecutablePath);
 		return 2;
 	}
 
-	UAgentBridgeSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAgentBridgeSubsystem>();
-	if (!Subsystem)
+	const FString AbsoluteProjectPath = FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath());
+	const FString AbsoluteReportPath = ReportPath.IsEmpty()
+		? FString()
+		: FPaths::ConvertRelativePathToFull(FPaths::IsRelative(ReportPath) ? (FPaths::ProjectDir() / ReportPath) : ReportPath);
+	const FString ChildLogPath = AbsoluteReportPath.IsEmpty()
+		? FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("AgentBridge/commandlet_run_tests.log"))
+		: FPaths::Combine(FPaths::GetPath(AbsoluteReportPath), FString::Printf(TEXT("%s_automation.log"), *FPaths::GetBaseFilename(AbsoluteReportPath)));
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(ChildLogPath), true);
+
+	// 测试插件默认不随普通 Editor receipt 常驻启用，这里显式补齐描述文件路径和插件开关。
+	const FString TestsPluginPath = ResolveAgentBridgeTestsPluginPath();
+	const FString TestsPluginArgs = TestsPluginPath.IsEmpty()
+		? FString()
+		: FString::Printf(TEXT(" -PLUGIN=\"%s\" -EnablePlugins=AgentBridgeTests"), *TestsPluginPath);
+
+	FString Args = FString::Printf(
+		TEXT("\"%s\"%s -ExecCmds=\"Automation RunTests %s;Quit\" -TestExit=\"Automation Test Queue Empty\" -Unattended -NoSplash -NoPause -NoSound -NullRHI -stdout -FullStdOutLogOutput -Abslog=\"%s\""),
+		*AbsoluteProjectPath,
+		*TestsPluginArgs,
+		*TestFilter,
+		*ChildLogPath);
+
+	uint32 ProcessId = 0;
+	void* StdOutReadPipe = nullptr;
+	void* StdOutWritePipe = nullptr;
+	FPlatformProcess::CreatePipe(StdOutReadPipe, StdOutWritePipe);
+
+	UE_LOG(LogTemp, Log, TEXT("[AgentBridge Commandlet] Launch RunTests child: %s %s"), *ExecutablePath, *Args);
+	FProcHandle ProcHandle = FPlatformProcess::CreateProc(
+		*ExecutablePath,
+		*Args,
+		true,
+		true,
+		false,
+		&ProcessId,
+		0,
+		nullptr,
+		StdOutWritePipe,
+		nullptr);
+
+	if (!ProcHandle.IsValid())
 	{
-		LastResultJson = MakeSimpleResultJson(EBridgeStatus::Failed, TEXT("AgentBridgeSubsystem unavailable"));
-		UE_LOG(LogTemp, Error, TEXT("[AgentBridge Commandlet] AgentBridgeSubsystem unavailable"));
+		if (StdOutReadPipe || StdOutWritePipe)
+		{
+			FPlatformProcess::ClosePipe(StdOutReadPipe, StdOutWritePipe);
+		}
+
+		LastResultJson = MakeSimpleResultJson(EBridgeStatus::Failed, TEXT("Failed to launch headless automation child process"));
+		UE_LOG(LogTemp, Error, TEXT("[AgentBridge Commandlet] Failed to launch child process for RunTests"));
 		return 2;
 	}
 
-	FBridgeResponse Response = Subsystem->RunAutomationTests(TestFilter, ReportPath);
+	FString ChildStdOut;
+	while (FPlatformProcess::IsProcRunning(ProcHandle))
+	{
+		if (StdOutReadPipe)
+		{
+			ChildStdOut += FPlatformProcess::ReadPipe(StdOutReadPipe);
+		}
+		FPlatformProcess::Sleep(0.05f);
+	}
+
+	FPlatformProcess::WaitForProc(ProcHandle);
+	if (StdOutReadPipe)
+	{
+		ChildStdOut += FPlatformProcess::ReadPipe(StdOutReadPipe);
+	}
+
+	int32 ChildExitCode = -1;
+	if (!FPlatformProcess::GetProcReturnCode(ProcHandle, &ChildExitCode))
+	{
+		ChildExitCode = -1;
+	}
+
+	if (StdOutReadPipe || StdOutWritePipe)
+	{
+		FPlatformProcess::ClosePipe(StdOutReadPipe, StdOutWritePipe);
+	}
+	FPlatformProcess::CloseProc(ProcHandle);
+
+	FString ChildLogContent;
+	FFileHelper::LoadFileToString(ChildLogContent, *ChildLogPath);
+
+	const bool bNoTestsMatched = ChildStdOut.Contains(TEXT("No automation tests matched"), ESearchCase::IgnoreCase)
+		|| ChildLogContent.Contains(TEXT("No automation tests matched"), ESearchCase::IgnoreCase);
+
+	TSharedPtr<FJsonObject> Data = MakeShareable(new FJsonObject());
+	Data->SetStringField(TEXT("filter"), TestFilter);
+	Data->SetStringField(TEXT("child_command_line"), FString::Printf(TEXT("%s %s"), *ExecutablePath, *Args));
+	Data->SetStringField(TEXT("child_log_path"), ChildLogPath);
+	Data->SetNumberField(TEXT("child_exit_code"), ChildExitCode);
+	Data->SetBoolField(TEXT("tests_plugin_explicitly_loaded"), !TestsPluginPath.IsEmpty());
+	if (!TestsPluginPath.IsEmpty())
+	{
+		Data->SetStringField(TEXT("tests_plugin_path"), TestsPluginPath);
+	}
+	Data->SetBoolField(TEXT("no_tests_matched"), bNoTestsMatched);
+	Data->SetNumberField(TEXT("stdout_length"), ChildStdOut.Len());
+
+	FBridgeResponse Response;
+	Response.Data = Data;
+
+	if (bNoTestsMatched)
+	{
+		Response.Status = EBridgeStatus::Failed;
+		Response.Summary = FString::Printf(TEXT("No automation tests matched filter '%s'"), *TestFilter);
+	}
+	else
+	{
+		Response.Status = ExitCodeToBridgeStatus(ChildExitCode);
+		Response.Summary = FString::Printf(TEXT("Automation child finished with exit code %d"), ChildExitCode);
+	}
+
+	Response.SyncForRemote();
 	LastResultJson = Response.ToJsonString();
 	UE_LOG(LogTemp, Log, TEXT("[AgentBridge Commandlet] RunTests status=%s summary=%s"), *BridgeStatusToString(Response.Status), *Response.Summary);
 	return StatusToExitCode(Response.Status);

@@ -19,6 +19,7 @@ public class AgentBridgeTests : ModuleRules
         PrivateDependencyModuleNames.AddRange(new string[]
         {
             "AgentBridge",
+            "AssetRegistry",
             "UnrealEd",
             "EditorScriptingUtilities",
             "AutomationController",
