@@ -80,11 +80,9 @@ UE5.5.4 Editor
 ```
 
 Orchestrator 依赖：
-- `PythonPackage/agent_ue5/spec_templates/scene_spec_template.yaml`（通用 Spec 模板）
-- 宿主项目的 `AgentSpecs/`（项目实例 Spec）
-- `PythonPackage/agent_ue5/bridge/query_tools.py`（反馈接口，三通道）
-- `PythonPackage/agent_ue5/bridge/write_tools.py`（写接口，三通道 + FScopedTransaction）
-- 宿主项目的 `AgentTools/run_orchestrator.py`（稳定入口）
+- `Specs/templates/scene_spec_template.yaml`（Spec 格式定义）
+- `Scripts/bridge/query_tools.py`（反馈接口，三通道）
+- `Scripts/bridge/write_tools.py`（写接口，三通道 + FScopedTransaction）
 - `Docs/feedback_write_mapping.md`（闭环映射）
 
 ---
@@ -94,24 +92,20 @@ Orchestrator 依赖：
 ### 3.1 目录布局
 
 ```
-PythonPackage/agent_ue5/
-├── bridge/
+Scripts/
+├── bridge/                  # Bridge 层（已有）
 │   ├── bridge_core.py
 │   ├── query_tools.py
 │   ├── write_tools.py
+│   ├── validation_tools.py
 │   └── ue_helpers.py
-├── orchestrator/
-│   ├── orchestrator.py      # 主编排逻辑
-│   ├── spec_reader.py       # Spec 文件解析
-│   ├── plan_generator.py    # 执行计划生成
-│   ├── verifier.py          # 验证逻辑（actual vs expected）
-│   └── report_generator.py  # 报告生成
-└── spec_templates/
-    └── scene_spec_template.yaml
-
-宿主项目侧：
-- `AgentSpecs/`：项目实例 Spec
-- `AgentTools/run_orchestrator.py`：项目级稳定入口
+└── orchestrator/            # 编排层（新增）
+    ├── __init__.py
+    ├── orchestrator.py      # 主编排逻辑
+    ├── spec_reader.py       # Spec 文件解析
+    ├── plan_generator.py    # 执行计划生成
+    ├── verifier.py          # 验证逻辑（actual vs expected）
+    └── report_generator.py  # 报告生成
 ```
 
 ### 3.2 模块职责
@@ -801,3 +795,4 @@ Bridge 函数已通过 `safe_execute` 包装（见 `bridge_implementation_plan.m
 | 第 4 周 | 实现 verifier.py + report_generator.py |
 | 第 5 周 | 扩展 Orchestrator 接入验证接口（inside_bounds / non_overlap） |
 | 第 8 周 | 用 Orchestrator 跑完整 Demo 场景 |
+

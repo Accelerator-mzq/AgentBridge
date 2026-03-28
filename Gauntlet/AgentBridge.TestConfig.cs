@@ -1,4 +1,4 @@
-// AgentBridge.TestConfig.cs
+﻿// AgentBridge.TestConfig.cs
 // AGENT + UE5 可操作层 — Gauntlet C# 测试会话配置（UE5.5.4）
 //
 // 说明：
@@ -11,103 +11,55 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Gauntlet;
 using UnrealBuildTool;
 
 namespace AgentBridge.Gauntlet
 {
-    public sealed class ProjectGauntletConfig
+    internal static class AgentBridgeGauntletDefaults
     {
-        [JsonPropertyName("all_tests_filter")]
-        public string AllTestsFilter { get; set; } = string.Empty;
+        // 全量测试：Project.AgentBridge 覆盖 L1/L2/L3.UITool；
+        // Functional Test 地图树在 UE5.5.4 下不挂在 Project.AgentBridge 下，需要单独补一个前缀。
+        public const string AllTestsFilter =
+            "Project.AgentBridge+Project.Functional Tests.Tests.FTEST_WarehouseDemo";
 
-        [JsonPropertyName("smoke_tests_filter")]
-        public string SmokeTestsFilter { get; set; } = string.Empty;
-
-        [JsonPropertyName("all_tests_max_duration")]
-        public int? AllTestsMaxDuration { get; set; }
-
-        [JsonPropertyName("smoke_tests_max_duration")]
-        public int? SmokeTestsMaxDuration { get; set; }
-
-        [JsonPropertyName("spec_execution_max_duration")]
-        public int? SpecExecutionMaxDuration { get; set; }
-
-        [JsonPropertyName("functional_test_prefixes")]
-        public List<string> FunctionalTestPrefixes { get; set; } = new();
+        // 冒烟测试只跑 L1 + L2，避免无 GPU 节点被 UI 渲染依赖拖住。
+        public const string SmokeTestsFilter =
+            "Project.AgentBridge.L1+Project.AgentBridge.L2";
     }
 
     public abstract class AgentBridgeConfigBase : UnrealTestConfiguration
     {
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
-        private ProjectGauntletConfig CachedProjectConfig;
-
-        [AutoParam("")]
-        public string ProjectConfigPath { get; set; } = string.Empty;
-
         // 由派生类生成本轮 Editor 需要追加的 AgentBridge 参数。
         protected abstract string BuildAgentBridgeCommandLine();
 
-        // 派生类可以覆盖默认超时，但项目配置优先。
-        protected virtual int? ResolveConfiguredMaxDuration(ProjectGauntletConfig projectConfig)
+        // 测试控制器类位于 AgentBridgeTests 插件内。
+        // 在回退到“项目壳 + 子模块”结构后，不能再依赖 Target receipt 的默认启用副作用，
+        // 否则普通打开项目不会报错，但 Gauntlet 的独立 Editor 会话也不会自动加载测试插件。
+        // 这里改为每次 Gauntlet 会话都显式带上测试插件路径和启用参数，保证控制器类可发现。
+        protected virtual string BuildAgentBridgeTestPluginCommandLine(UnrealAppConfig AppConfig)
         {
-            return null;
-        }
-
-        protected ProjectGauntletConfig GetProjectGauntletConfig()
-        {
-            if (CachedProjectConfig != null)
+            if (AppConfig.ProjectFile == null)
             {
-                return CachedProjectConfig;
+                throw new Exception("Gauntlet session is missing AppConfig.ProjectFile; cannot resolve AgentBridgeTests.uplugin path.");
             }
 
-            string configPath = ResolveProjectConfigPath();
-            if (!File.Exists(configPath))
+            string ProjectRoot = AppConfig.ProjectFile.Directory.FullName;
+            string TestPluginFile = Path.Combine(
+                ProjectRoot,
+                "Plugins",
+                "AgentBridge",
+                "AgentBridgeTests",
+                "AgentBridgeTests.uplugin");
+
+            if (!File.Exists(TestPluginFile))
             {
-                throw new Exception(
-                    $"AgentBridge Gauntlet project config not found: {configPath}. " +
-                    "Please pass -ProjectConfigPath=<path> or set AGENT_UE5_GAUNTLET_PROJECT_CONFIG.");
+                throw new FileNotFoundException(
+                    $"AgentBridgeTests plugin descriptor not found: {TestPluginFile}",
+                    TestPluginFile);
             }
 
-            string json = File.ReadAllText(configPath);
-            CachedProjectConfig = JsonSerializer.Deserialize<ProjectGauntletConfig>(json, JsonOptions)
-                ?? throw new Exception($"Failed to parse project config: {configPath}");
-            return CachedProjectConfig;
-        }
-
-        protected string RequireProjectFilter(Func<ProjectGauntletConfig, string> selector, string fieldName)
-        {
-            string value = selector(GetProjectGauntletConfig())?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new Exception($"Project config field '{fieldName}' is required.");
-            }
-
-            return value;
-        }
-
-        private string ResolveProjectConfigPath()
-        {
-            if (!string.IsNullOrWhiteSpace(ProjectConfigPath))
-            {
-                return ProjectConfigPath;
-            }
-
-            string envPath = Environment.GetEnvironmentVariable("AGENT_UE5_GAUNTLET_PROJECT_CONFIG");
-            if (!string.IsNullOrWhiteSpace(envPath))
-            {
-                return envPath;
-            }
-
-            throw new Exception(
-                "Project Gauntlet config path is required. " +
-                "Pass -ProjectConfigPath=<path> or set AGENT_UE5_GAUNTLET_PROJECT_CONFIG.");
+            return $"-PLUGIN=\"{TestPluginFile}\" -EnablePlugins=AgentBridgeTests";
         }
 
         public override void ApplyToConfig(
@@ -119,23 +71,17 @@ namespace AgentBridge.Gauntlet
 
             if (AppConfig.ProcessType.IsEditor())
             {
-                ProjectGauntletConfig projectConfig = GetProjectGauntletConfig();
-                int? configuredMaxDuration = ResolveConfiguredMaxDuration(projectConfig);
-                if (configuredMaxDuration.HasValue)
-                {
-                    MaxDuration = configuredMaxDuration.Value;
-                }
-
                 // UE5.5.4 的 Gauntlet 编辑器控制器不会在普通 Editor 启动阶段直接初始化，
                 // 而是在 PreBeginPIE 回调里调用 PerformInitialization()。
                 // 因此只要本轮会话依赖 -gauntlet=... 控制器，就必须显式带上 PIE，
                 // 否则控制器类虽然出现在命令行里，但不会真正被实例化。
                 AppConfig.CommandLineParams.Add("PIE");
+                AppConfig.CommandLineParams.AddRawCommandline(BuildAgentBridgeTestPluginCommandLine(AppConfig));
 
                 string ExtraArgs = BuildAgentBridgeCommandLine();
                 if (!string.IsNullOrEmpty(ExtraArgs))
                 {
-                    AppConfig.CommandLine += " " + ExtraArgs;
+                    AppConfig.CommandLineParams.AddRawCommandline(ExtraArgs);
                 }
             }
         }
@@ -170,17 +116,8 @@ namespace AgentBridge.Gauntlet
             MaxDuration = 900;
         }
 
-        protected override int? ResolveConfiguredMaxDuration(ProjectGauntletConfig projectConfig)
-        {
-            return projectConfig.AllTestsMaxDuration;
-        }
-
         protected override string BuildAgentBridgeCommandLine()
         {
-            string allTestsFilter = RequireProjectFilter(
-                config => config.AllTestsFilter,
-                "all_tests_filter");
-
             return
                 // AllTests 需要保留真实渲染，不能像 Smoke 那样直接走 -NullRHI。
                 // 但 UE5.5.4 的无人值守 Gauntlet Editor 会话在进入 PIE 前，会先经过
@@ -195,7 +132,7 @@ namespace AgentBridge.Gauntlet
                 $"-ini:Engine:[/Script/Engine.AutomationTestSettings]:DefaultInteractiveFramerate=1," +
                 $"[/Script/Engine.AutomationTestSettings]:DefaultInteractiveFramerateDuration=1," +
                 $"[/Script/Engine.AutomationTestSettings]:DefaultInteractiveFramerateWaitTime=30 " +
-                $"-AgentBridgeFilter=\"{allTestsFilter}\" " +
+                $"-AgentBridgeFilter=\"{AgentBridgeGauntletDefaults.AllTestsFilter}\" " +
                 $"-AgentBridgeMaxWait={MaxDuration}";
         }
     }
@@ -208,23 +145,14 @@ namespace AgentBridge.Gauntlet
             Nullrhi = true;
         }
 
-        protected override int? ResolveConfiguredMaxDuration(ProjectGauntletConfig projectConfig)
-        {
-            return projectConfig.SmokeTestsMaxDuration;
-        }
-
         protected override string BuildAgentBridgeCommandLine()
         {
-            string smokeTestsFilter = RequireProjectFilter(
-                config => config.SmokeTestsFilter,
-                "smoke_tests_filter");
-
             return
                 // 这里显式补 -NullRHI，避免仅依赖基类 Nullrhi 属性在不同 RunUnreal 版本下的隐式拼接。
                 // Task16 的 SmokeTests 目标就是“无 GPU 的 L1/L2 冒烟验证”，
                 // 所以最终命令行里必须肉眼可见地带上 -NullRHI，便于日志审计。
                 $"-NullRHI -NoSound -NoSplash " +
-                $"-AgentBridgeFilter=\"{smokeTestsFilter}\" " +
+                $"-AgentBridgeFilter=\"{AgentBridgeGauntletDefaults.SmokeTestsFilter}\" " +
                 $"-AgentBridgeMaxWait={MaxDuration}";
         }
     }
@@ -237,11 +165,6 @@ namespace AgentBridge.Gauntlet
         public SpecExecutionConfig()
         {
             MaxDuration = 300;
-        }
-
-        protected override int? ResolveConfiguredMaxDuration(ProjectGauntletConfig projectConfig)
-        {
-            return projectConfig.SpecExecutionMaxDuration;
         }
 
         protected override string BuildAgentBridgeCommandLine()
@@ -261,9 +184,9 @@ namespace AgentBridge.Gauntlet
     /// <summary>
     /// 全量测试节点：L1 + L2 + L3.UITool + Functional Test。
     /// 调用方式：
-    ///   RunUAT.bat -ScriptsForProject=MyProject.uproject -ScriptDir=<FrameworkRoot>\Gauntlet RunUnreal
+    ///   RunUAT.bat -ScriptsForProject=MyProject.uproject -ScriptDir=Gauntlet RunUnreal
     ///     -project=MyProject.uproject -build=editor -platform=Win64
-    ///     -Namespaces=AgentBridge.Gauntlet -test=AllTests -ProjectConfigPath=<ProjectConfig> -unattended
+    ///     -Namespaces=AgentBridge.Gauntlet -test=AllTests -unattended
     /// </summary>
     public class AllTests : AgentBridgeTestNode<AllTestsConfig>
     {
@@ -326,3 +249,4 @@ namespace UnrealEditor
         }
     }
 }
+

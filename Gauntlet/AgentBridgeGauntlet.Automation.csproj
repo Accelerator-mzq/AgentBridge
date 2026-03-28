@@ -1,6 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <EngineRoot Condition="'$(EngineRoot)' == '' and '$(AGENT_UE5_ENGINE_ROOT)' != ''">$(AGENT_UE5_ENGINE_ROOT)</EngineRoot>
     <!-- 优先复用 UAT 在运行期注入的引擎根目录，避免把本机绝对路径写死。 -->
     <EngineRoot Condition="'$(EngineRoot)' == '' and '$(uebp_LOCAL_ROOT)' != ''">$(uebp_LOCAL_ROOT)</EngineRoot>
     <EngineRoot Condition="'$(EngineRoot)' == '' and '$(UEBP_LOCAL_ROOT)' != ''">$(UEBP_LOCAL_ROOT)</EngineRoot>
@@ -59,3 +58,4 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
 </Project>
+

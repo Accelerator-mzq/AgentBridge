@@ -1,4 +1,4 @@
-﻿# Tool Contract v0.1
+# Tool Contract v0.1
 
 > 目标引擎版本：UE5.5.4 | 文档版本：v0.3 | 适用范围：AGENT + UE5 可操作层
 
@@ -6,7 +6,7 @@
 
 本文档定义 AI Agent 使用的每个工具的契约：参数、返回值、调用前提、风险等级、UE5 依赖与错误处理。
 
-每个工具本质上是对一个或多个 **UE5 官方 API** 的结构化封装。Tool Contract 在 UE5 原生 API 之上增加了参数校验、统一响应格式、错误码、Schema 对齐等编排层价值。所有工具的返回值必须符合 `PythonPackage/agent_ue5/schemas/` 中对应的 JSON Schema 定义。
+每个工具本质上是对一个或多个 **UE5 官方 API** 的结构化封装。Tool Contract 在 UE5 原生 API 之上增加了参数校验、统一响应格式、错误码、Schema 对齐等编排层价值。所有工具的返回值必须符合 `Schemas/` 中对应的 JSON Schema 定义。
 
 > 完整的 UE5 官方能力总览及工具→API 映射表，参见 `Docs/ue5_capability_map.md`。
 
@@ -997,3 +997,4 @@ L3 使用条件：L1 无对应 API + 操作可结构化 + 结果可通过 L1 验
 - rollback / checkpoint 契约
 
 应尽量保持向后兼容。
+
