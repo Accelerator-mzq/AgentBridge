@@ -1,6 +1,6 @@
 # AgentBridge — 通用 Agent 规则
 
-> 插件版本：v0.3.0 | 目标引擎版本：UE5.5.4
+> 插件版本：v0.4.0 | 目标引擎版本：UE5.5.4
 >
 > 本文件定义使用 AgentBridge 插件时的**通用 Agent 行为规则**。
 > 这些规则适用于所有集成 AgentBridge 插件的 UE5 项目。
@@ -10,11 +10,19 @@
 
 ## 1. 目的
 
-AgentBridge 是一层**受控编排层**——位于 AI Agent 与 UE5 官方能力之间，将 UE5 官方 API（Python Editor Scripting / Remote Control API / Commandlet / UAT / Automation Test Framework 等）统一封装为结构化工具，并增加参数约束、验证闭环和审计能力。Bridge 封装层的全部执行能力来自 UE5 官方 API，编排层的价值在于统一接入和增加护栏。
+AgentBridge 是一套面向不同 UE5 项目的**通用 Agent 开发框架插件**。它包含：
 
-Agent 不得直接执行不可控的 UE5 编辑器 GUI 操作。本插件的主干执行路径是受控工具路线（结构化参数 → 确定性 API → 可读回验证），确定性和可验证性最高。UE5 官方通过 Automation Driver 提供了 UI 输入模拟能力，在当前受控框架下可作为受约束的 UI 级执行后端——仅用于无直接 API 的 UI 级操作（如 Editor 面板测试），且必须通过 AgentBridge 接口调用、结果可验证。
+- **Skill Compiler Plane**：从设计输入和项目现状编译出结构化图纸（`Scripts/compiler/`）
+- **Reviewed Handoff**：Compiler 向 Orchestrator 的正式交接物
+- **Execution Orchestrator Plane**：基于 Run Plan 的执行编排（`Scripts/orchestrator/`）
+- **受控工具体系**：L1 语义工具 > L2 编辑器服务工具 > L3 UI 工具（`Source/AgentBridge/`）
+- **验证闭环**：写后读回 + Schema 校验 + 回归验证（`Scripts/validation/`）
 
-所有 UE5 操作都必须通过已批准的受控工具完成。本插件的间接操作通道（Python Editor Scripting / Remote Control API / Commandlet / UAT / 自定义 Editor Plugin）均要求 UE5 Editor 处于运行状态（Commandlet 的无 GUI 模式除外）。
+**分层原则**：项目层提供输入和实例，插件层提供通用编译与执行机制。
+
+Agent 不得直接执行不可控的 UE5 编辑器 GUI 操作。主干执行路径是受控工具路线（结构化参数 → 确定性 API → 可读回验证）。
+
+所有 UE5 操作都必须通过已批准的受控工具完成。
 
 ---
 
