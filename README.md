@@ -1,14 +1,23 @@
-# AgentBridge — UE5 AI Agent 受控编排层插件
+# AgentBridge — UE5 通用 Agent 开发框架插件
 
-> 插件版本：v0.3.0 | 目标引擎版本：UE5.5.4
+> 插件版本：v0.4.0 | 目标引擎版本：UE5.5.4
 
 ## 1. 插件定义
 
-**一句话定义**：AgentBridge 是一套位于 AI Agent 与 UE5 官方能力之间的受控编排层插件，通过"结构化 Spec → 受控工具 → 写后读回 → 结构化验证"闭环，让 AI Agent 在可控边界内参与 UE5 开发流程。
+**一句话定义**：AgentBridge 是一套面向不同 UE5 项目的**通用 Agent 开发框架插件**，包含编译前端（Skill Compiler Plane）、交接物机制（Reviewed Handoff）、执行编排（Orchestrator）、受控工具体系（L1/L2/L3）、验证与恢复框架，让 AI Agent 在可控边界内参与 UE5 开发流程。
 
-**核心定位**：本插件不是 Unreal Engine 内置的单一官方模块，也不是替代 UE5 官方能力的自定义系统。它将分散的 UE5 官方能力（Python Editor Scripting / Remote Control API / Commandlet / UAT / Automation Test Framework 等）统一收编为结构化工具，并对这些工具增加参数约束、权限控制、执行护栏、验证闭环与审计能力。
+**核心定位**：本插件不只是工具接口插件，而是**可跨项目复用的通用 Agent 框架**。它将分散的 UE5 官方能力统一收编为结构化工具，并在此之上提供：
+- **Skill Compiler Plane**：从设计输入和项目现状输入编译出结构化图纸
+- **Reviewed Handoff**：Compiler 向 Orchestrator 的正式交接物
+- **Execution Orchestrator**：基于 Run Plan 的执行编排
+- **受控工具体系**：L1 语义工具 > L2 编辑器服务工具 > L3 UI 工具
+- **验证闭环**：写后读回 + Schema 校验 + 回归验证
 
-**本插件不是**让 AI 直接不受控地点击 UE5 编辑器 GUI。**本插件是**把 UE5 官方 API 封装为可被 Agent 安全调用的结构化工具平台。主干路径是受控工具调用（结构化参数 → 确定性 API → 可验证）；对于无直接 API 的 UI 级操作，可通过 Automation Driver 作为受约束的执行后端。
+**项目层 vs 插件层**：
+- 项目层负责：输入源（GDD）、配置（Presets）、实例（Handoff / Report）、治理
+- 插件层负责：通用编译、执行、验证框架（本插件）
+
+**本插件不是**让 AI 直接不受控地点击 UE5 编辑器 GUI。**本插件是**把 UE5 官方 API 封装为可被 Agent 安全调用的结构化工具平台，并在此之上提供完整的编译→交接→执行→验证链路。
 
 ---
 
@@ -142,47 +151,52 @@ AgentBridge/
 ├── Source/                          # C++ 源码（核心实现）
 │   └── AgentBridge/
 │       ├── AgentBridge.Build.cs
-│       ├── Private/                 # AgentBridgeModule / Subsystem / Commandlet / AutomationDriverAdapter / UATRunner
-│       └── Public/                  # AgentBridgeSubsystem.h / Commandlet.h / BridgeTypes.h 等
+│       ├── Private/                 # Subsystem / Commandlet / AutomationDriverAdapter / UATRunner
+│       └── Public/                  # AgentBridgeSubsystem.h / BridgeTypes.h 等
 │
-├── Docs/                            # 设计文档（11 个 .md）
-│   ├── ue5_capability_map.md        # ★ UE5 官方能力分层映射（核心参考）
-│   ├── architecture_overview.md     # 总体架构
-│   ├── mvp_scope.md                 # MVP 边界
-│   ├── tool_contract_v0_1.md        # 工具契约（含 UE5 依赖标注）
-│   ├── field_specification_v0_1.md  # 字段规范
-│   ├── feedback_interface_catalog.md # 反馈接口清单
-│   ├── feedback_write_mapping.md    # 写-读映射关系表
-│   ├── bridge_implementation_plan.md # Bridge 实现方案
-│   ├── mvp_smoke_test_plan.md       # 冒烟测试方案
-│   ├── bridge_verification_and_error_handling.md # 接口验证与错误处理
-│   └── orchestrator_design.md       # Orchestrator 设计
-│
-├── Schemas/                         # 数据格式契约（JSON Schema + examples）
-│   ├── common/                      # 通用基础类型（6 个）
-│   ├── feedback/                    # 反馈接口 Schema（7 个）
-│   ├── write_feedback/              # 写后反馈 Schema
-│   ├── examples/                    # 示例 JSON（8 个）
-│   ├── versions/                    # 版本清单
-│   └── README.md
-│
-├── Scripts/                         # Python 客户端 + 校验脚本
+├── Scripts/                         # ★ Python 框架主体
+│   ├── compiler/                    # Skill Compiler Plane 主体
+│   │   ├── intake/                  # Design & Project State Intake
+│   │   ├── routing/                 # Mode / Genre Routing
+│   │   ├── handoff/                 # Reviewed Handoff Builder
+│   │   ├── analysis/                # Baseline / Delta 分析（占位）
+│   │   ├── generation/              # Spec 生成（占位）
+│   │   └── review/                  # Cross-Spec Review（占位）
+│   ├── orchestrator/                # Execution Orchestrator
+│   │   ├── orchestrator.py          # 现有 Spec 执行入口
+│   │   ├── handoff_runner.py        # Handoff 执行入口（新增）
+│   │   └── run_plan_builder.py      # Run Plan 生成器（新增）
 │   ├── bridge/                      # Bridge 封装层（三通道客户端）
-│   └── validation/                  # Schema/example 校验脚本
+│   └── validation/                  # Schema / Handoff 校验脚本
 │
-├── Specs/                           # 结构化设计 Spec 模板
-│   ├── templates/
-│   └── README.md
+├── Schemas/                         # 数据格式契约
+│   ├── common/                      # 通用基础类型
+│   ├── feedback/                    # 反馈接口 Schema
+│   ├── write_feedback/              # 写后反馈 Schema
+│   ├── reviewed_handoff.schema.json # ★ Reviewed Handoff Schema（新增）
+│   ├── run_plan.schema.json         # ★ Run Plan Schema（新增）
+│   ├── examples/                    # 示例 JSON
+│   └── versions/                    # 版本清单
+│
+├── Skills/                          # ★ Skill 体系（新增）
+│   ├── base_domains/                # Base Skill Domains（占位）
+│   └── genre_packs/                 # Genre Skill Packs
+│       ├── _core/                   # 类型包机制核心（占位）
+│       └── boardgame/               # 首个类型包（最小骨架）
+│
+├── Specs/                           # 静态基座与契约
+│   ├── StaticBase/                  # Static Spec Base（占位）
+│   ├── Contracts/                   # Patch / Migration Contract（占位）
+│   └── templates/                   # Spec 模板（现有）
+│
+├── Docs/                            # 框架级设计文档
 │
 ├── Gauntlet/                        # CI/CD 测试会话配置
-│   └── AgentBridge.TestConfig.cs
 │
-└── Roadmap/                         # 路线图与周任务
-    ├── mvp_roadmap.md
-    └── weekly_tasks.md
+├── Roadmap/                         # 路线图（历史参考）
+│
+└── AgentBridgeTests/                # 嵌套测试插件（按需启用）
 ```
-
-> 测试插件 `AgentBridgeTests` 位于嵌套目录 `Plugins/AgentBridge/AgentBridgeTests/`，按需显式启用。
 
 ---
 
@@ -236,4 +250,4 @@ AgentBridge/
 
 ## 8. 一句话总结
 
-这套插件的核心不是"让 AI 像人一样使用 UE5 编辑器"，而是：**把 UE5 官方已有的分散能力（Python Editor Scripting / Remote Control API / Commandlet / UAT / Automation Test Framework）统一收编为结构化工具平台，让 Agent 在规则、反馈和验证护栏内调用这些工具。** Bridge 封装层的全部执行能力来自 UE5 官方 API，编排层的价值在于统一接入、参数约束、验证闭环和审计能力。
+AgentBridge 不只是"把 UE5 官方 API 封装为工具接口"，而是：**一套面向不同 UE5 项目的通用 Agent 开发框架，包含编译前端（Skill Compiler Plane）、交接物机制（Reviewed Handoff）、执行编排（Orchestrator）、受控工具体系（L1/L2/L3）、验证与恢复框架。** 项目层提供输入和配置，插件层提供通用编译与执行机制。
